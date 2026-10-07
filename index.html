@@ -5,20 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#05070d">
-<meta name="description" content="A clock that scrolls through deep time, from now to the death of the Sun.">
 <title>The Deep Future Clock</title>
 <style>
   :root {
     --fg: #ece9e2;
     --dim: rgba(236, 233, 226, 0.55);
-    --bg: #05070d;
     --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
     --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
-    background: var(--bg);
+    background: #05070d;
     color: var(--fg);
     overscroll-behavior: none;
     scrollbar-width: none;
@@ -30,237 +28,167 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-
   #sky {
     position: fixed; inset: 0;
     width: 100%; height: 100%;
-    z-index: 0;
-    display: block;
+    z-index: 0; display: block;
   }
-
-  /* Vignette only — no movement, no grain, no flash */
+  /* Vignette + very subtle color fringe — the "lens" */
   .veil {
     position: fixed; inset: 0; z-index: 2;
     pointer-events: none;
     background:
-      radial-gradient(ellipse 140% 100% at 50% 55%,
-        transparent 34%,
-        rgba(0,0,0,.28) 68%,
-        rgba(0,0,0,.72) 100%);
+      radial-gradient(ellipse 130% 100% at 50% 55%,
+        transparent 30%,
+        rgba(0,0,0,.34) 68%,
+        rgba(0,0,0,.82) 100%);
   }
-
   .stage {
     position: fixed; inset: 0; z-index: 4;
     display: grid; place-items: center;
     padding: 8vmin 6vmin 16vmin;
-    pointer-events: none;
-    text-align: center;
+    pointer-events: none; text-align: center;
   }
   .readout {
-    width: 100%;
-    max-width: 24ch;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    width: 100%; max-width: 24ch;
+    display: flex; flex-direction: column; align-items: center;
   }
   .number {
     font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum" 1, "ss01" 1;
+    font-feature-settings: "tnum" 1;
     line-height: .92;
-    text-shadow: 0 0 70px rgba(0,0,0,.75), 0 2px 14px rgba(0,0,0,.6);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: .12em;
+    text-shadow: 0 0 70px rgba(0,0,0,.8), 0 2px 14px rgba(0,0,0,.65);
+    display: flex; flex-direction: column; align-items: center; gap: .12em;
   }
   #num {
     font-size: clamp(2.6rem, 12.5vw, 9.5rem);
     font-weight: 200;
     letter-spacing: -0.048em;
-    white-space: nowrap;
-    display: block;
+    white-space: nowrap; display: block;
   }
   #unit {
     font-size: clamp(.68rem, 1.55vw, .98rem);
-    font-weight: 400;
-    letter-spacing: 0.34em;
-    text-transform: uppercase;
-    color: var(--dim);
-    display: block;
-    min-height: 1.2em;
+    font-weight: 400; letter-spacing: 0.34em;
+    text-transform: uppercase; color: var(--dim);
+    display: block; min-height: 1.2em;
   }
   .rule {
     width: clamp(44px, 8vw, 96px);
-    height: 1px;
-    background: currentColor;
-    opacity: .22;
+    height: 1px; background: currentColor; opacity: .22;
     margin: clamp(1.7rem, 4.2vh, 2.8rem) auto clamp(1.4rem, 3.4vh, 2.2rem);
   }
   .milestones {
-    display: grid;
-    place-items: center;
-    min-height: 5.6em;
-    width: 100%;
+    display: grid; place-items: center;
+    min-height: 5.6em; width: 100%;
   }
   .line {
-    grid-area: 1 / 1;
-    margin: 0;
+    grid-area: 1 / 1; margin: 0;
     max-width: 26ch;
-    font-family: var(--serif);
-    font-style: italic;
-    font-weight: 400;
+    font-family: var(--serif); font-style: italic; font-weight: 400;
     font-size: clamp(1.05rem, 2.5vw, 1.72rem);
     line-height: 1.36;
     color: rgba(236, 233, 226, 0.94);
-    opacity: 0;
-    transform: translateY(6px);
-    transition:
-      opacity 950ms cubic-bezier(.2,.6,.2,1),
-      transform 950ms cubic-bezier(.2,.6,.2,1);
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 950ms cubic-bezier(.2,.6,.2,1),
+                transform 950ms cubic-bezier(.2,.6,.2,1);
     text-wrap: balance;
-    text-shadow: 0 2px 26px rgba(0,0,0,.75), 0 1px 3px rgba(0,0,0,.6);
+    text-shadow: 0 2px 26px rgba(0,0,0,.8), 0 1px 3px rgba(0,0,0,.65);
   }
   .line.active { opacity: 1; transform: translateY(0); }
   .line.leaving { opacity: 0; transform: translateY(-6px); }
-
   .source {
     margin: clamp(1.1rem, 2.6vh, 1.8rem) 0 0;
-    font-family: var(--sans);
     font-size: clamp(.62rem, 1.15vw, .74rem);
-    letter-spacing: .24em;
-    text-transform: uppercase;
+    letter-spacing: .24em; text-transform: uppercase;
     color: rgba(236, 233, 226, 0.34);
-    opacity: 0;
-    transition: opacity 900ms ease;
+    opacity: 0; transition: opacity 900ms ease;
   }
   .source.visible { opacity: 1; }
-
   .hint {
-    position: fixed;
-    left: 50%;
+    position: fixed; left: 50%;
     bottom: max(6vh, env(safe-area-inset-bottom, 0px) + 4vh);
     transform: translateX(-50%);
-    z-index: 4;
-    font-size: .66rem;
-    letter-spacing: .44em;
-    text-transform: uppercase;
-    color: var(--dim);
-    transition: opacity 800ms ease;
+    z-index: 4; font-size: .66rem;
+    letter-spacing: .44em; text-transform: uppercase;
+    color: var(--dim); transition: opacity 800ms ease;
     pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1em;
+    display: flex; flex-direction: column; align-items: center; gap: 1em;
   }
   .hint.hidden { opacity: 0; }
   .hint .chev {
     width: 1px; height: 28px;
     background: linear-gradient(to bottom, transparent, var(--dim));
   }
-
   .endnote {
-    position: fixed;
-    left: 50%;
+    position: fixed; left: 50%;
     bottom: max(9vh, env(safe-area-inset-bottom, 0px) + 7vh);
     transform: translate(-50%, 10px);
     z-index: 4;
-    font-family: var(--serif);
-    font-style: italic;
+    font-family: var(--serif); font-style: italic;
     font-size: clamp(.98rem, 2vw, 1.3rem);
-    color: rgba(236,233,226,.82);
+    color: rgba(236,233,226,.85);
     opacity: 0;
     transition: opacity 1500ms ease, transform 1500ms ease;
-    pointer-events: none;
-    text-align: center;
+    pointer-events: none; text-align: center;
     width: min(90vw, 42ch);
-    text-shadow: 0 2px 28px rgba(0,0,0,.85);
+    text-shadow: 0 2px 28px rgba(0,0,0,.9);
   }
   .endnote.visible { opacity: 1; transform: translate(-50%, 0); }
-
   .rail {
     position: fixed;
     right: clamp(16px, 2.4vw, 32px);
-    top: 16vh;
-    height: 68vh;
-    width: 2px;
-    z-index: 5;
+    top: 16vh; height: 68vh; width: 2px; z-index: 5;
     background: linear-gradient(to bottom,
-      transparent,
-      rgba(255,255,255,.12) 6%,
-      rgba(255,255,255,.12) 94%,
-      transparent);
-    pointer-events: auto;
-    cursor: pointer;
-    touch-action: none;
+      transparent, rgba(255,255,255,.12) 6%,
+      rgba(255,255,255,.12) 94%, transparent);
+    pointer-events: auto; cursor: pointer; touch-action: none;
   }
   .rail::before {
-    content: "";
-    position: absolute;
-    top: 0; bottom: 0;
-    left: -18px; right: -18px;
+    content: ""; position: absolute;
+    top: 0; bottom: 0; left: -18px; right: -18px;
   }
   .rail-tick {
-    position: absolute;
-    right: -8px;
+    position: absolute; right: -8px;
     width: 18px; height: 18px;
     margin: 0; padding: 0;
-    background: none; border: 0;
-    cursor: pointer;
-    pointer-events: auto;
-    transform: translateY(-50%);
+    background: none; border: 0; cursor: pointer;
+    pointer-events: auto; transform: translateY(-50%);
     display: grid; place-items: center;
   }
   .rail-tick::after {
-    content: "";
-    width: 7px; height: 1px;
+    content: ""; width: 7px; height: 1px;
     background: rgba(255,255,255,.34);
     transition: width 240ms ease, background 240ms ease;
   }
   .rail-tick:hover::after,
   .rail-tick:focus-visible::after,
   .rail-tick[data-active="true"]::after {
-    width: 13px;
-    background: rgba(255,255,255,.95);
+    width: 13px; background: rgba(255,255,255,.95);
   }
   .rail-tick:focus-visible { outline: none; }
   .rail-head {
-    position: absolute;
-    right: -5px;
+    position: absolute; right: -5px;
     width: 10px; height: 10px;
-    border-radius: 50%;
-    background: var(--fg);
+    border-radius: 50%; background: var(--fg);
     box-shadow: 0 0 14px rgba(236,233,226,.6), 0 0 3px rgba(236,233,226,.95);
-    transform: translateY(-50%);
-    pointer-events: none;
+    transform: translateY(-50%); pointer-events: none;
   }
   @media (max-width: 720px) { .rail { display: none; } }
-
   .controls {
-    position: fixed;
-    left: 50%;
+    position: fixed; left: 50%;
     bottom: max(18px, env(safe-area-inset-bottom, 0px) + 14px);
-    transform: translateX(-50%);
-    z-index: 6;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 12px;
-    max-width: 100vw;
+    transform: translateX(-50%); z-index: 6;
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 8px; padding: 0 12px; max-width: 100vw;
   }
   .controls button {
     appearance: none;
-    background: rgba(15,15,20,.44);
+    background: rgba(15,15,20,.46);
     border: 1px solid rgba(255,255,255,.10);
-    color: var(--dim);
-    font: inherit;
-    font-size: .64rem;
-    font-weight: 500;
-    letter-spacing: .18em;
-    text-transform: uppercase;
-    padding: .6em 1.05em;
-    border-radius: 999px;
-    cursor: pointer;
+    color: var(--dim); font: inherit;
+    font-size: .64rem; font-weight: 500;
+    letter-spacing: .18em; text-transform: uppercase;
+    padding: .6em 1.05em; border-radius: 999px; cursor: pointer;
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     transition: color 200ms ease, border-color 200ms ease, background 200ms ease;
@@ -269,7 +197,7 @@
   .controls button:hover {
     color: var(--fg);
     border-color: rgba(255,255,255,.26);
-    background: rgba(30,30,40,.58);
+    background: rgba(30,30,40,.6);
   }
   .controls button:focus-visible {
     outline: 1px solid rgba(255,255,255,.55);
@@ -284,22 +212,15 @@
     color: #fff;
     border-color: rgba(255,255,255,.55);
   }
-
   .spacer { height: 1400vh; }
-
   @media (prefers-reduced-motion: reduce) {
     .line { transition-duration: 240ms; }
     .endnote { transition-duration: 400ms; }
   }
-
   .sr {
-    position: absolute;
-    width: 1px; height: 1px;
-    padding: 0; margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
   }
 </style>
 </head>
@@ -341,7 +262,6 @@
 <div class="endnote" id="endnote">None of this matters. That&rsquo;s okay.</div>
 
 <p id="live" class="sr" aria-live="polite"></p>
-
 <div class="spacer"></div>
 
 <script>
@@ -376,12 +296,24 @@
   ];
 
   // ============================================================
-  //  Time <-> scroll
+  //  Helpers
   // ============================================================
   const scrollToYears = p => p <= HOLD ? 0 : Math.pow(10, ((p - HOLD) / (1 - HOLD)) * MAX_LOG);
   const yearsToScroll = y => y <= 1 ? 0 : HOLD + (Math.log10(y) / MAX_LOG) * (1 - HOLD);
   const depthOf       = y => y <= 1 ? 0 : Math.log10(y) / MAX_LOG;
   const maxScroll     = () => Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+  const lerp          = (a, b, t) => a + (b - a) * t;
+  const clamp         = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+  const smooth        = t => t * t * (3 - 2 * t);
+
+  function mulberry32(a) {
+    return function() {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
 
   function fmt(y) {
     if (y < 1) return { n: "Now", u: "" };
@@ -399,421 +331,507 @@
     return { n: String(Math.round(y)), u: "years" };
   }
 
-  const lerp  = (a, b, t) => a + (b - a) * t;
-  const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
-  const smooth = t => t * t * (3 - 2 * t);
-
-  function mulberry32(a) {
-    return function() {
-      a |= 0; a = a + 0x6D2B79F5 | 0;
-      let t = Math.imul(a ^ a >>> 15, 1 | a);
-      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
-  }
-
   // ============================================================
-  //  Static scene — painted once, then graded per frame
+  //  Scenery — a single cinematic still that morphs with depth
   // ============================================================
-  const Sky = (() => {
+  const Scenery = (() => {
     const canvas = document.getElementById("sky");
     const ctx = canvas.getContext("2d", { alpha: false });
-
     let W = 0, H = 0, dpr = 1;
-    let base = null;          // offscreen painted scene
-    let baseW = 0, baseH = 0; // physical pixel size of base
 
-    // Fixed normalized points — never change, so nothing ever moves
-    let brightStars = [];     // sparse foreground stars
-    let milkyStars  = [];     // stars inside the band
-    let dustLanes   = [];     // dark ellipses over the band
+    // Star cache (regenerated only on resize)
+    let starCanvas = null;
+    let starW = 0, starH = 0;
 
-    // The band runs from top-left to bottom-right
-    const BAND_ANGLE = -0.62; // radians, roughly -35°
+    // Ridges — generated once
+    const RIDGE_N = 300;
+    let ridgeLayers = [];
 
-    function buildPoints() {
-      const rng = mulberry32(0xDEEF);
+    // Galactic band angle
+    const BAND = -0.62;
 
-      // Milky Way: dense band of small stars
-      milkyStars = [];
-      const MN = 2600;
-      for (let i = 0; i < MN; i++) {
-        const t = rng();                       // along the band
-        // Gaussian-ish perpendicular offset
-        const g = (rng() + rng() + rng() + rng() - 2) / 2;
-        const off = g * 0.13;
-        const jitter = (rng() - 0.5) * 0.05;
-
-        const cx = 0.5, cy = 0.5;
-        const dx = Math.cos(BAND_ANGLE);
-        const dy = Math.sin(BAND_ANGLE);
-        const nx = -dy, ny = dx;
-
-        const x = cx + (t - 0.5) * 1.6 * dx + off * nx + jitter;
-        const y = cy + (t - 0.5) * 1.6 * dy + off * ny + jitter;
-
-        milkyStars.push({
-          x, y,
-          r: 0.20 + Math.pow(rng(), 2.4) * 0.75,
-          a: 0.16 + rng() * 0.5,
-          // slight color drift: bluer in the band core, warmer at edges
-          warmth: clamp(Math.abs(off) * 8 + (rng() - 0.5) * 0.3, 0, 1)
-        });
+    // ---------------- Keyframes: the "shot list" ----------------
+    const KEY = [
+      { d: 0.00, // Now — familiar night sky
+        skyTop: [  3,   4,  10], skyMid: [  7,  10,  22], skyBot: [ 18,  26,  50],
+        haze:   [ 55,  80, 140], hazeA: 0.34,
+        stars: 0.90, milky: 0.78,
+        ridge: [  5,   7,  12], rough: 1.00, city: 1.00,
+        sun: { x: 0.76, y: 0.20, r: 0.012, color: [235, 240, 255], glow: 0.55 }
+      },
+      { d: 0.10, // ~200 yrs
+        skyTop: [  3,   4,  10], skyMid: [  7,  10,  22], skyBot: [ 18,  26,  50],
+        haze:   [ 55,  80, 140], hazeA: 0.34,
+        stars: 0.94, milky: 0.82,
+        ridge: [  5,   7,  12], rough: 1.00, city: 0.00,
+        sun: { x: 0.76, y: 0.20, r: 0.012, color: [235, 240, 255], glow: 0.55 }
+      },
+      { d: 0.22, // ~1000 yrs
+        skyTop: [  5,   5,  16], skyMid: [ 10,   8,  26], skyBot: [ 22,  18,  44],
+        haze:   [ 60,  55, 110], hazeA: 0.30,
+        stars: 0.96, milky: 0.80,
+        ridge: [  6,   6,  14], rough: 0.94, city: 0.00,
+        sun: { x: 0.74, y: 0.22, r: 0.014, color: [228, 228, 245], glow: 0.60 }
+      },
+      { d: 0.38, // ~10k yrs — Sahara green again
+        skyTop: [  8,  12,  26], skyMid: [ 34,  26,  18], skyBot: [ 68,  46,  24],
+        haze:   [130,  85,  40], hazeA: 0.38,
+        stars: 0.70, milky: 0.52,
+        ridge: [ 16,  14,  14], rough: 0.78, city: 0.00,
+        sun: { x: 0.68, y: 0.36, r: 0.024, color: [255, 220, 150], glow: 0.90 }
+      },
+      { d: 0.55, // ~100k yrs — unfamiliar sky
+        skyTop: [ 10,   6,  22], skyMid: [ 18,  10,  32], skyBot: [ 32,  16,  40],
+        haze:   [ 75,  45,  90], hazeA: 0.32,
+        stars: 1.00, milky: 0.62,
+        ridge: [ 10,   6,  16], rough: 0.66, city: 0.00,
+        sun: { x: 0.28, y: 0.30, r: 0.018, color: [212, 212, 240], glow: 0.55 }
+      },
+      { d: 0.70, // ~10M yrs
+        skyTop: [ 24,  14,  18], skyMid: [ 38,  22,  22], skyBot: [ 54,  34,  26],
+        haze:   [105,  62,  46], hazeA: 0.30,
+        stars: 0.68, milky: 0.34,
+        ridge: [ 18,  10,  12], rough: 0.56, city: 0.00,
+        sun: { x: 0.56, y: 0.28, r: 0.026, color: [240, 210, 180], glow: 0.72 }
+      },
+      { d: 0.84, // ~250M yrs — Pangaea Ultima
+        skyTop: [ 42,  20,  24], skyMid: [ 64,  32,  32], skyBot: [ 88,  46,  38],
+        haze:   [150,  75,  62], hazeA: 0.32,
+        stars: 0.36, milky: 0.18,
+        ridge: [ 28,  15,  16], rough: 0.32, city: 0.00,
+        sun: { x: 0.52, y: 0.34, r: 0.040, color: [255, 200, 165], glow: 0.98 }
+      },
+      { d: 0.93, // ~1B yrs — brighter Sun
+        skyTop: [ 62,  32,  18], skyMid: [112,  62,  30], skyBot: [168,  92,  46],
+        haze:   [210, 115,  55], hazeA: 0.36,
+        stars: 0.12, milky: 0.05,
+        ridge: [ 32,  17,  12], rough: 0.28, city: 0.00,
+        sun: { x: 0.50, y: 0.36, r: 0.078, color: [255, 220, 170], glow: 1.32 }
+      },
+      { d: 0.98, // ~5B yrs — red giant
+        skyTop: [120,  30,  12], skyMid: [185,  55,  20], skyBot: [225,  95,  42],
+        haze:   [255, 135,  72], hazeA: 0.42,
+        stars: 0.02, milky: 0.00,
+        ridge: [ 38,  18,  14], rough: 0.18, city: 0.00,
+        sun: { x: 0.50, y: 0.48, r: 0.30, color: [255, 130, 70], glow: 2.00 }
+      },
+      { d: 1.00, // 7.9B yrs — engulfed
+        skyTop: [255, 235, 210], skyMid: [255, 245, 225], skyBot: [255, 250, 240],
+        haze:   [255, 245, 230], hazeA: 0.55,
+        stars: 0.00, milky: 0.00,
+        ridge: [ 60,  30,  20], rough: 0.10, city: 0.00,
+        sun: { x: 0.50, y: 0.50, r: 0.95, color: [255, 250, 240], glow: 2.80 }
       }
+    ];
 
-      // Foreground bright stars
-      brightStars = [];
-      const BN = 320;
-      for (let i = 0; i < BN; i++) {
-        brightStars.push({
-          x: rng(),
-          y: rng(),
-          r: 0.35 + Math.pow(rng(), 3) * 1.55,
-          a: 0.42 + rng() * 0.55,
-          warmth: rng()
-        });
+    function frameAt(depth) {
+      if (depth <= KEY[0].d) return KEY[0];
+      const last = KEY[KEY.length - 1];
+      if (depth >= last.d) return last;
+      for (let i = 0; i < KEY.length - 1; i++) {
+        const a = KEY[i], b = KEY[i + 1];
+        if (depth >= a.d && depth <= b.d) {
+          const t = smooth((depth - a.d) / (b.d - a.d));
+          return {
+            skyTop: [lerp(a.skyTop[0],b.skyTop[0],t), lerp(a.skyTop[1],b.skyTop[1],t), lerp(a.skyTop[2],b.skyTop[2],t)],
+            skyMid: [lerp(a.skyMid[0],b.skyMid[0],t), lerp(a.skyMid[1],b.skyMid[1],t), lerp(a.skyMid[2],b.skyMid[2],t)],
+            skyBot: [lerp(a.skyBot[0],b.skyBot[0],t), lerp(a.skyBot[1],b.skyBot[1],t), lerp(a.skyBot[2],b.skyBot[2],t)],
+            haze:   [lerp(a.haze[0],b.haze[0],t),     lerp(a.haze[1],b.haze[1],t),     lerp(a.haze[2],b.haze[2],t)],
+            hazeA:  lerp(a.hazeA, b.hazeA, t),
+            stars:  lerp(a.stars, b.stars, t),
+            milky:  lerp(a.milky, b.milky, t),
+            ridge:  [lerp(a.ridge[0],b.ridge[0],t),   lerp(a.ridge[1],b.ridge[1],t),   lerp(a.ridge[2],b.ridge[2],t)],
+            rough:  lerp(a.rough, b.rough, t),
+            city:   lerp(a.city, b.city, t),
+            sun: {
+              x: lerp(a.sun.x, b.sun.x, t),
+              y: lerp(a.sun.y, b.sun.y, t),
+              r: lerp(a.sun.r, b.sun.r, t),
+              color: [
+                lerp(a.sun.color[0],b.sun.color[0],t),
+                lerp(a.sun.color[1],b.sun.color[1],t),
+                lerp(a.sun.color[2],b.sun.color[2],t)
+              ],
+              glow: lerp(a.sun.glow, b.sun.glow, t)
+            }
+          };
+        }
       }
+      return KEY[0];
+    }
 
-      // Dust lanes — long dark blobs running along the band
-      dustLanes = [];
-      const DN = 14;
-      for (let i = 0; i < DN; i++) {
-        dustLanes.push({
-          t: rng(),
-          w: 0.10 + rng() * 0.28,
-          h: 0.012 + rng() * 0.035,
-          a: 0.35 + rng() * 0.5
-        });
+    // ---------------- Ridge generation ----------------
+    function buildRidges() {
+      ridgeLayers = [
+        { seed: 301, amp: 0.035, base: 0.76, hazeMix: 0.72 },
+        { seed: 302, amp: 0.062, base: 0.82, hazeMix: 0.42 },
+        { seed: 303, amp: 0.098, base: 0.89, hazeMix: 0.10 }
+      ];
+      for (const L of ridgeLayers) {
+        const rng = mulberry32(L.seed);
+        const octaves = [
+          { f: 0.8,  a: 1.00, ph: rng() * 6.283 },
+          { f: 1.7,  a: 0.50, ph: rng() * 6.283 },
+          { f: 3.3,  a: 0.26, ph: rng() * 6.283 },
+          { f: 6.9,  a: 0.13, ph: rng() * 6.283 },
+          { f: 14.3, a: 0.06, ph: rng() * 6.283 },
+          { f: 28.7, a: 0.03, ph: rng() * 6.283 }
+        ];
+        const arr = new Float32Array(RIDGE_N);
+        for (let i = 0; i < RIDGE_N; i++) {
+          const x = i / (RIDGE_N - 1);
+          let v = 0;
+          for (const o of octaves) v += Math.sin(x * o.f * 6.283 + o.ph) * o.a;
+          v /= 2.0;                             // roughly -1..1
+          arr[i] = clamp(0.5 + v * 0.5, 0, 1);  // 0..1
+        }
+        L.arr = arr;
       }
     }
 
-    // ---- Paint the base scene once ----
-    function paintBase() {
-      // Offscreen at physical resolution, so it stays 1:1 with the canvas
-      base = document.createElement("canvas");
-      base.width = baseW;
-      base.height = baseH;
-      const c = base.getContext("2d");
-      c.scale(dpr, dpr);   // we work in CSS pixels inside
+    // ---------------- Star cache ----------------
+    // Realistic distribution: many dim, few bright. Bright stars get
+    // 4-point diffraction spikes — the signature of a real photograph.
+    function buildStarCache() {
+      starCanvas = document.createElement("canvas");
+      starCanvas.width = starW;
+      starCanvas.height = starH;
+      const c = starCanvas.getContext("2d");
+      c.scale(dpr, dpr);
 
-      // ------ 1. Deep space gradient ------
-      const sky = c.createLinearGradient(0, 0, 0, H);
-      sky.addColorStop(0.00, "#02030a");
-      sky.addColorStop(0.35, "#060915");
-      sky.addColorStop(0.62, "#0a0c1c");
-      sky.addColorStop(0.85, "#0d0a18");
-      sky.addColorStop(1.00, "#120817");
-      c.fillStyle = sky;
-      c.fillRect(0, 0, W, H);
+      const rng = mulberry32(0xC0FFEE);
+      const dx = Math.cos(BAND), dy = Math.sin(BAND);
+      const nx = -dy, ny = dx;
 
-      // ------ 2. Broad nebula washes (very soft) ------
-      const washes = [
-        { x: 0.24, y: 0.30, r: 0.70, c: [ 46,  58, 120], a: 0.16 },
-        { x: 0.78, y: 0.36, r: 0.62, c: [118,  56, 118], a: 0.11 },
-        { x: 0.50, y: 0.72, r: 0.75, c: [ 44,  72, 108], a: 0.10 },
-        { x: 0.15, y: 0.68, r: 0.55, c: [150,  72,  66], a: 0.07 }
-      ];
-      for (const w of washes) {
-        const gx = w.x * W, gy = w.y * H, gr = w.r * Math.min(W, H);
-        const g = c.createRadialGradient(gx, gy, 0, gx, gy, gr);
-        const [r, gg, b] = w.c;
-        g.addColorStop(0, `rgba(${r},${gg},${b},${w.a})`);
-        g.addColorStop(0.45, `rgba(${r},${gg},${b},${w.a * 0.35})`);
-        g.addColorStop(1, `rgba(${r},${gg},${b},0)`);
-        c.fillStyle = g;
-        c.fillRect(0, 0, W, H);
-      }
+      const TOTAL = Math.min(11000, Math.max(3500, Math.round((W * H) / 320)));
 
-      // ------ 3. Milky Way soft glow (under the stars) ------
-      const bw = Math.min(W, H) * 0.34;
-      const cx = W * 0.5, cy = H * 0.5;
-      const bx1 = cx - Math.cos(BAND_ANGLE) * W * 0.85;
-      const by1 = cy - Math.sin(BAND_ANGLE) * W * 0.85;
-      const bx2 = cx + Math.cos(BAND_ANGLE) * W * 0.85;
-      const by2 = cy + Math.sin(BAND_ANGLE) * W * 0.85;
+      // Deep dim field
+      for (let i = 0; i < TOTAL; i++) {
+        // 55% clustered in the galactic band
+        let x, y;
+        if (rng() < 0.55) {
+          const t = rng();
+          // gaussian-ish perpendicular offset
+          const g = (rng() + rng() + rng() + rng() - 2) * 0.5;
+          const off = g * 0.16;
+          x = 0.5 + (t - 0.5) * 1.7 * dx + off * nx + (rng() - 0.5) * 0.04;
+          y = 0.5 + (t - 0.5) * 1.7 * dy + off * ny + (rng() - 0.5) * 0.04;
+        } else {
+          x = rng() * 1.5 - 0.25;
+          y = rng() * 1.5 - 0.25;
+        }
+        if (x < -0.05 || x > 1.05 || y < -0.05 || y > 1.05) continue;
 
-      const bandGrad = c.createLinearGradient(
-        bx1 + -Math.sin(BAND_ANGLE) * bw, by1 + Math.cos(BAND_ANGLE) * bw,
-        bx1 +  Math.sin(BAND_ANGLE) * bw, by1 - Math.cos(BAND_ANGLE) * bw
-      );
-      bandGrad.addColorStop(0.00, "rgba(140,160,220,0)");
-      bandGrad.addColorStop(0.42, "rgba(160,180,230,0.10)");
-      bandGrad.addColorStop(0.50, "rgba(200,215,255,0.16)");
-      bandGrad.addColorStop(0.58, "rgba(160,180,230,0.10)");
-      bandGrad.addColorStop(1.00, "rgba(140,160,220,0)");
+        const px = x * W, py = y * H;
 
-      c.save();
-      // Clip to a thick diagonal strip so the glow hugs the band
-      c.translate(cx, cy);
-      c.rotate(BAND_ANGLE);
-      c.fillStyle = bandGrad;
-      c.fillRect(-W, -bw, W * 2, bw * 2);
-      c.restore();
+        // magnitude: power law, so most stars are very faint
+        const mag = Math.pow(rng(), 4.5);
 
-      // ------ 4. Milky Way star field ------
-      for (const s of milkyStars) {
-        const x = s.x * W;
-        const y = s.y * H;
-        if (x < -4 || x > W + 4 || y < -4 || y > H + 4) continue;
-        const r = s.r;
-        const a = s.a;
-        // cool → warm color drift
-        const cr = Math.round(200 + 55 * s.warmth);
-        const cg = Math.round(210 + 30 * s.warmth);
-        const cb = Math.round(245 - 40 * s.warmth);
-        c.fillStyle = `rgba(${cr},${cg},${cb},${a})`;
-        c.beginPath();
-        c.arc(x, y, r, 0, Math.PI * 2);
-        c.fill();
-      }
+        // color temperature: mostly white, some blue, some orange
+        const ct = rng();
+        let cr, cg, cb;
+        if (ct < 0.72)      { cr = 235; cg = 238; cb = 250; }
+        else if (ct < 0.90) { cr = 200; cg = 218; cb = 255; }
+        else                { cr = 255; cg = 220; cb = 180; }
 
-      // ------ 5. Dust lanes (dark bands over the milky way) ------
-      for (const d of dustLanes) {
-        const x = (0.5 + (d.t - 0.5) * Math.cos(BAND_ANGLE) * 1.6) * W;
-        const y = (0.5 + (d.t - 0.5) * Math.sin(BAND_ANGLE) * 1.6) * H;
-        const rx = d.w * W * 0.5;
-        const ry = d.h * H * 0.5;
-        const g = c.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry));
-        g.addColorStop(0, `rgba(2,4,12,${d.a})`);
-        g.addColorStop(0.6, `rgba(2,4,12,${d.a * 0.4})`);
-        g.addColorStop(1, "rgba(2,4,12,0)");
-        c.save();
-        c.translate(x, y);
-        c.rotate(BAND_ANGLE);
-        c.scale(1, ry / Math.max(rx, ry));
-        c.translate(-x, -y);
-        c.fillStyle = g;
-        c.beginPath();
-        c.arc(x, y, Math.max(rx, ry), 0, Math.PI * 2);
-        c.fill();
-        c.restore();
-      }
+        const r = 0.15 + mag * 2.4;
+        const a = 0.14 + mag * 0.85;
 
-      // ------ 6. Foreground bright stars + halos ------
-      for (const s of brightStars) {
-        const x = s.x * W;
-        const y = s.y * H;
-        const r = s.r;
-        const a = s.a;
-
-        // tiny cross/glow for the brightest
-        if (r > 1.35) {
-          const halo = c.createRadialGradient(x, y, 0, x, y, r * 6);
-          const cr = Math.round(240 + 15 * s.warmth);
-          const cg = Math.round(238 + 12 * s.warmth);
-          const cb = Math.round(246 - 20 * s.warmth);
-          halo.addColorStop(0, `rgba(${cr},${cg},${cb},${a * 0.55})`);
-          halo.addColorStop(0.4, `rgba(${cr},${cg},${cb},${a * 0.12})`);
-          halo.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
-          c.fillStyle = halo;
+        // Glow for the brightest few
+        if (mag > 0.78) {
+          const gr = r * 8;
+          const glow = c.createRadialGradient(px, py, 0, px, py, gr);
+          glow.addColorStop(0, `rgba(${cr},${cg},${cb},${a * 0.5})`);
+          glow.addColorStop(0.35, `rgba(${cr},${cg},${cb},${a * 0.10})`);
+          glow.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+          c.fillStyle = glow;
           c.beginPath();
-          c.arc(x, y, r * 6, 0, Math.PI * 2);
+          c.arc(px, py, gr, 0, 6.283);
           c.fill();
         }
 
-        c.fillStyle = `rgba(245,246,252,${a})`;
+        c.fillStyle = `rgba(${cr},${cg},${cb},${a})`;
         c.beginPath();
-        c.arc(x, y, r, 0, Math.PI * 2);
+        c.arc(px, py, r, 0, 6.283);
         c.fill();
+
+        // Diffraction spikes — the "photograph" signature
+        if (mag > 0.86) {
+          const len = 3 + mag * 22;
+          // horizontal
+          const hg = c.createLinearGradient(px - len, py, px + len, py);
+          hg.addColorStop(0,   `rgba(${cr},${cg},${cb},0)`);
+          hg.addColorStop(0.5, `rgba(${cr},${cg},${cb},${a * 0.55})`);
+          hg.addColorStop(1,   `rgba(${cr},${cg},${cb},0)`);
+          c.strokeStyle = hg;
+          c.lineWidth = 0.55;
+          c.beginPath();
+          c.moveTo(px - len, py); c.lineTo(px + len, py);
+          c.stroke();
+          // vertical
+          const vg = c.createLinearGradient(px, py - len, px, py + len);
+          vg.addColorStop(0,   `rgba(${cr},${cg},${cb},0)`);
+          vg.addColorStop(0.5, `rgba(${cr},${cg},${cb},${a * 0.55})`);
+          vg.addColorStop(1,   `rgba(${cr},${cg},${cb},0)`);
+          c.strokeStyle = vg;
+          c.beginPath();
+          c.moveTo(px, py - len); c.lineTo(px, py + len);
+          c.stroke();
+        }
       }
-
-      // ------ 7. Planet silhouette (arc at bottom) ------
-      const planetHorizon = H * 0.74;
-      const planetR       = Math.max(W, H) * 1.45;
-      const pcx           = W * 0.5;
-      const pcy           = planetHorizon + planetR * 0.78;
-
-      // Solid dark disc
-      c.beginPath();
-      c.arc(pcx, pcy, planetR, Math.PI, 0, false);
-      c.closePath();
-      const planetGrad = c.createLinearGradient(0, planetHorizon, 0, H);
-      planetGrad.addColorStop(0, "#05060c");
-      planetGrad.addColorStop(0.5, "#020309");
-      planetGrad.addColorStop(1, "#000000");
-      c.fillStyle = planetGrad;
-      c.fill();
-
-      // ------ 8. Atmospheric rim (the beautiful part) ------
-      // A soft band of blue-white light hugging the planet's limb,
-      // strongest toward the upper-left (where the sun is coming from).
-      c.save();
-      c.beginPath();
-      c.arc(pcx, pcy, planetR, Math.PI, 0, false);
-      c.closePath();
-      c.clip();
-
-      // Big radial glow anchored to the planet's top edge
-      const rimY = planetHorizon;
-      const rimGrad = c.createRadialGradient(
-        pcx, rimY + planetR * 0.02, 0,
-        pcx, rimY + planetR * 0.02, planetR * 0.30
-      );
-      rimGrad.addColorStop(0.00, "rgba(150,200,255,0.55)");
-      rimGrad.addColorStop(0.25, "rgba(120,170,235,0.24)");
-      rimGrad.addColorStop(0.60, "rgba( 80,120,190,0.07)");
-      rimGrad.addColorStop(1.00, "rgba( 60, 90,150,0)");
-      c.fillStyle = rimGrad;
-      c.fillRect(0, planetHorizon - planetR * 0.35, W, planetR * 0.4);
-
-      // Extra-hot left edge (subsolar point)
-      const rimGrad2 = c.createRadialGradient(
-        pcx - W * 0.18, rimY, 0,
-        pcx - W * 0.18, rimY, W * 0.5
-      );
-      rimGrad2.addColorStop(0, "rgba(210,230,255,0.32)");
-      rimGrad2.addColorStop(0.5, "rgba(140,180,240,0.08)");
-      rimGrad2.addColorStop(1, "rgba(100,140,220,0)");
-      c.fillStyle = rimGrad2;
-      c.fillRect(0, planetHorizon - 2, W, 3);
-      c.fillRect(0, planetHorizon - 2, W, 60);
-
-      c.restore();
-
-      // Sharp thin line right at the limb
-      c.beginPath();
-      c.arc(pcx, pcy, planetR, Math.PI, 0, false);
-      c.strokeStyle = "rgba(200,220,255,0.32)";
-      c.lineWidth = 1.1;
-      c.stroke();
     }
 
+    // ---------------- Resize ----------------
     function resize() {
       dpr = Math.min(2, window.devicePixelRatio || 1);
       W = canvas.clientWidth;
       H = canvas.clientHeight;
       canvas.width  = Math.floor(W * dpr);
       canvas.height = Math.floor(H * dpr);
-      baseW = canvas.width;
-      baseH = canvas.height;
+      starW = canvas.width;
+      starH = canvas.height;
 
-      if (!milkyStars.length) buildPoints();
-      paintBase();
-
-      // Reset transform; the base is drawn 1:1 in physical pixels
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (!ridgeLayers.length) buildRidges();
+      buildStarCache();
     }
 
-    // ---- Per-frame grade color for a given depth ----
-    function gradeAt(depth) {
-      // Stops: [ depth, multiplyTint, screenWash, sunHue, sunGlowStrength ]
-      const stops = [
-        { d: 0.00, mul: [210, 220, 255], mulA: 0.10, scr: [ 60,  80, 140], scrA: 0.00, sun: [232, 236, 248], glow: 0.55 },
-        { d: 0.18, mul: [220, 210, 245], mulA: 0.12, scr: [ 70,  70, 150], scrA: 0.02, sun: [236, 232, 240], glow: 0.60 },
-        { d: 0.40, mul: [255, 225, 200], mulA: 0.18, scr: [150, 100,  70], scrA: 0.08, sun: [255, 224, 170], glow: 0.85 },
-        { d: 0.58, mul: [255, 200, 170], mulA: 0.26, scr: [180, 110,  60], scrA: 0.14, sun: [255, 200, 150], glow: 1.15 },
-        { d: 0.72, mul: [255, 170, 140], mulA: 0.34, scr: [200, 100,  60], scrA: 0.20, sun: [255, 180, 130], glow: 1.45 },
-        { d: 0.86, mul: [255, 140, 110], mulA: 0.44, scr: [220,  90,  50], scrA: 0.28, sun: [255, 160, 110], glow: 1.85 },
-        { d: 0.94, mul: [255, 130, 100], mulA: 0.55, scr: [230, 110,  70], scrA: 0.34, sun: [255, 190, 140], glow: 2.25 },
-        { d: 1.00, mul: [255, 230, 210], mulA: 0.80, scr: [255, 240, 220], scrA: 0.55, sun: [255, 248, 235], glow: 3.10 }
+    // ---------------- Sky ----------------
+    function drawSky(f) {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0.00, `rgb(${f.skyTop[0]|0},${f.skyTop[1]|0},${f.skyTop[2]|0})`);
+      g.addColorStop(0.55, `rgb(${f.skyMid[0]|0},${f.skyMid[1]|0},${f.skyMid[2]|0})`);
+      g.addColorStop(1.00, `rgb(${f.skyBot[0]|0},${f.skyBot[1]|0},${f.skyBot[2]|0})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      // Faint nebula washes — 4 soft blobs
+      const washes = [
+        { x: 0.22, y: 0.28, r: 0.75, c: [ 55,  70, 130], a: 0.12 },
+        { x: 0.80, y: 0.34, r: 0.60, c: [140,  60, 120], a: 0.08 },
+        { x: 0.50, y: 0.70, r: 0.80, c: [ 50,  80, 120], a: 0.07 },
+        { x: 0.12, y: 0.66, r: 0.55, c: [160,  80,  70], a: 0.05 }
       ];
-      if (depth <= stops[0].d) return stops[0];
-      const last = stops[stops.length - 1];
-      if (depth >= last.d) return last;
-      for (let i = 0; i < stops.length - 1; i++) {
-        const a = stops[i], b = stops[i + 1];
-        if (depth >= a.d && depth <= b.d) {
-          const t = smooth((depth - a.d) / (b.d - a.d));
-          return {
-            mul: [
-              lerp(a.mul[0], b.mul[0], t),
-              lerp(a.mul[1], b.mul[1], t),
-              lerp(a.mul[2], b.mul[2], t)
-            ],
-            mulA: lerp(a.mulA, b.mulA, t),
-            scr: [
-              lerp(a.scr[0], b.scr[0], t),
-              lerp(a.scr[1], b.scr[1], t),
-              lerp(a.scr[2], b.scr[2], t)
-            ],
-            scrA: lerp(a.scrA, b.scrA, t),
-            sun: [
-              lerp(a.sun[0], b.sun[0], t),
-              lerp(a.sun[1], b.sun[1], t),
-              lerp(a.sun[2], b.sun[2], t)
-            ],
-            glow: lerp(a.glow, b.glow, t)
-          };
-        }
+      for (const w of washes) {
+        const gx = w.x * W, gy = w.y * H, gr = w.r * Math.min(W, H);
+        const wg = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr);
+        wg.addColorStop(0, `rgba(${w.c[0]},${w.c[1]},${w.c[2]},${w.a})`);
+        wg.addColorStop(0.5, `rgba(${w.c[0]},${w.c[1]},${w.c[2]},${w.a * 0.28})`);
+        wg.addColorStop(1, `rgba(${w.c[0]},${w.c[1]},${w.c[2]},0)`);
+        ctx.fillStyle = wg;
+        ctx.fillRect(0, 0, W, H);
       }
-      return stops[0];
     }
 
-    // ---- Sun disc: fixed position, grows with depth ----
-    function drawSun(depth, grade) {
+    // ---------------- Milky Way ----------------
+    function drawMilky(f) {
+      if (f.milky < 0.01) return;
+      const cx = W * 0.5, cy = H * 0.5;
+      const bw = Math.min(W, H) * 0.55;
+      const bl = Math.max(W, H) * 2.6;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(BAND);
+      const g = ctx.createLinearGradient(0, -bw, 0, bw);
+      g.addColorStop(0.00, "rgba(120,140,200,0)");
+      g.addColorStop(0.34, "rgba(140,160,215,0.05)");
+      g.addColorStop(0.46, "rgba(190,205,245,0.16)");
+      g.addColorStop(0.50, "rgba(210,225,255,0.22)");
+      g.addColorStop(0.54, "rgba(190,205,245,0.16)");
+      g.addColorStop(0.66, "rgba(140,160,215,0.05)");
+      g.addColorStop(1.00, "rgba(120,140,200,0)");
+      ctx.globalAlpha = f.milky;
+      ctx.fillStyle = g;
+      ctx.fillRect(-bl, -bw, bl * 2, bw * 2);
+
+      // Dust lanes — long, dark, aligned to the band
+      const rng = mulberry32(0xDEAD);
+      for (let i = 0; i < 12; i++) {
+        const t = rng();
+        const offY = (rng() - 0.5) * bw * 0.55;
+        const w = 300 + rng() * 700;
+        const h = 12 + rng() * 26;
+        const px = (t - 0.5) * bl * 0.9;
+        const py = offY;
+        const dg = ctx.createRadialGradient(px, py, 0, px, py, w);
+        dg.addColorStop(0, `rgba(3,5,14,${0.32 * f.milky})`);
+        dg.addColorStop(0.6, `rgba(3,5,14,${0.12 * f.milky})`);
+        dg.addColorStop(1, "rgba(3,5,14,0)");
+        ctx.fillStyle = dg;
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.scale(1, h / w);
+        ctx.beginPath();
+        ctx.arc(0, 0, w, 0, 6.283);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    // ---------------- Stars ----------------
+    function drawStars(f) {
+      if (!starCanvas || f.stars < 0.01) return;
+      ctx.save();
+      ctx.globalAlpha = f.stars;
+      ctx.drawImage(starCanvas, 0, 0, W, H);
+      ctx.restore();
+    }
+
+    // ---------------- Haze band ----------------
+    function drawHaze(f) {
+      const bandTop = H * 0.52;
+      const g = ctx.createLinearGradient(0, bandTop, 0, H);
+      const [r, gg, b] = f.haze;
+      g.addColorStop(0.00, `rgba(${r|0},${gg|0},${b|0},0)`);
+      g.addColorStop(0.45, `rgba(${r|0},${gg|0},${b|0},${f.hazeA * 0.45})`);
+      g.addColorStop(1.00, `rgba(${r|0},${gg|0},${b|0},${f.hazeA})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, bandTop, W, H - bandTop);
+    }
+
+    // ---------------- Ridges ----------------
+    function drawRidges(f) {
+      const stepX = W / (RIDGE_N - 1);
+      for (let li = 0; li < ridgeLayers.length; li++) {
+        const L = ridgeLayers[li];
+        const arr = L.arr;
+
+        const baseY = L.base * H;
+        const amp = L.amp * H * f.rough;
+
+        const mix = L.hazeMix;
+        const r = f.ridge[0] * (1 - mix) + f.haze[0] * mix;
+        const g = f.ridge[1] * (1 - mix) + f.haze[1] * mix;
+        const b = f.ridge[2] * (1 - mix) + f.haze[2] * mix;
+
+        ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+        ctx.beginPath();
+        ctx.moveTo(0, H);
+        for (let i = 0; i < RIDGE_N; i++) {
+          ctx.lineTo(i * stepX, baseY - arr[i] * amp);
+        }
+        ctx.lineTo(W, H);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // ---------------- City lights ----------------
+    const CITY = (() => {
+      const rng = mulberry32(0xC17Y);
+      const out = [];
+      for (let i = 0; i < 90; i++) {
+        out.push({
+          x: rng(),
+          r: 0.4 + rng() * 1.1,
+          a: 0.35 + rng() * 0.6,
+          jitter: (rng() - 0.5) * 0.012
+        });
+      }
+      return out;
+    })();
+
+    function drawCities(f) {
+      if (f.city < 0.01) return;
+      const L = ridgeLayers[2];      // nearest ridge
+      const arr = L.arr;
+      const baseY = L.base * H;
+      const amp = L.amp * H * f.rough;
+
+      ctx.globalAlpha = 1;
+      for (const c of CITY) {
+        const i = Math.min(RIDGE_N - 1, Math.floor(c.x * (RIDGE_N - 1)));
+        const y = baseY - arr[i] * amp + c.jitter * H;
+        const x = c.x * W;
+
+        // Warm dot with soft halo
+        const halo = ctx.createRadialGradient(x, y - 1.5, 0, x, y - 1.5, 6);
+        halo.addColorStop(0, `rgba(255,215,155,${0.30 * f.city * c.a})`);
+        halo.addColorStop(1, "rgba(255,215,155,0)");
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(x, y - 1.5, 6, 0, 6.283);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(255,225,175,${0.85 * f.city * c.a})`;
+        ctx.beginPath();
+        ctx.arc(x, y - 1.5, c.r, 0, 6.283);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // ---------------- Sun ----------------
+    function drawSun(f, depth) {
+      const sun = f.sun;
       const minSide = Math.min(W, H);
+      const sx = sun.x * W;
+      const sy = sun.y * H;
+      const r = Math.max(1.5, sun.r * minSide);
+      const [cr, cg, cb] = sun.color.map(v => v | 0);
+      const glow = sun.glow;
 
-      // Position: high and right at the start, sinks toward the horizon
-      const sx = lerp(0.78, 0.50, smooth(depth)) * W;
-      const sy = lerp(0.22, 0.60, smooth(depth)) * H;
-
-      // Radius: pinprick → half the screen
-      const rN = lerp(0.008, 0.55, Math.pow(depth, 1.15));
-      const r  = rN * minSide;
-
-      const [cr, cg, cb] = grade.sun.map(v => v | 0);
-      const glow = grade.glow;
-
-      // Outer halo (very wide, very soft)
-      const haloR = r * 7;
+      // Wide outer halo
+      const haloR = r * (8 + depth * 12);
       const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, haloR);
-      halo.addColorStop(0,    `rgba(${cr},${cg},${cb},${clamp(0.42 * glow * (1 - depth * 0.4), 0, 1)})`);
-      halo.addColorStop(0.20, `rgba(${cr},${cg},${cb},${clamp(0.14 * glow, 0, 1)})`);
-      halo.addColorStop(0.55, `rgba(${cr},${cg},${cb},${clamp(0.035 * glow, 0, 1)})`);
-      halo.addColorStop(1,    `rgba(${cr},${cg},${cb},0)`);
+      halo.addColorStop(0.00, `rgba(${cr},${cg},${cb},${clamp(0.42 * glow * (1 - depth * 0.35), 0, 1)})`);
+      halo.addColorStop(0.18, `rgba(${cr},${cg},${cb},${clamp(0.16 * glow, 0, 1)})`);
+      halo.addColorStop(0.48, `rgba(${cr},${cg},${cb},${clamp(0.045 * glow, 0, 1)})`);
+      halo.addColorStop(1.00, `rgba(${cr},${cg},${cb},0)`);
       ctx.fillStyle = halo;
       ctx.fillRect(sx - haloR, sy - haloR, haloR * 2, haloR * 2);
 
-      // Disc — brighter core, warmer edge (limb darkening)
-      const disc = ctx.createRadialGradient(sx, sy, 0, sx, sy, Math.max(1, r));
-      disc.addColorStop(0.00, `rgba(255,255,255,1)`);
+      // Anamorphic streak (horizontal) — the cinematic signature
+      if (depth > 0.15 && r > 3) {
+        const streakLen = Math.min(W * 0.9, r * 40);
+        const sa = clamp(0.20 * glow * (1 - depth * 0.3), 0, 1);
+        const sg = ctx.createLinearGradient(sx - streakLen, sy, sx + streakLen, sy);
+        sg.addColorStop(0.00, `rgba(${cr},${cg},${cb},0)`);
+        sg.addColorStop(0.42, `rgba(${cr},${cg},${cb},${sa * 0.5})`);
+        sg.addColorStop(0.50, `rgba(255,255,255,${sa})`);
+        sg.addColorStop(0.58, `rgba(${cr},${cg},${cb},${sa * 0.5})`);
+        sg.addColorStop(1.00, `rgba(${cr},${cg},${cb},0)`);
+        ctx.fillStyle = sg;
+        const sh = Math.max(1, r * 0.06 + 1);
+        ctx.fillRect(sx - streakLen, sy - sh / 2, streakLen * 2, sh);
+      }
+
+      // Disc with limb darkening
+      const disc = ctx.createRadialGradient(sx, sy, 0, sx, sy, r);
+      disc.addColorStop(0.00, "rgba(255,255,255,1)");
       disc.addColorStop(0.55, `rgba(${cr},${cg},${cb},1)`);
-      disc.addColorStop(0.90, `rgba(${(cr * 0.95) | 0},${(cg * 0.85) | 0},${(cb * 0.75) | 0},1)`);
+      disc.addColorStop(0.90, `rgba(${(cr*0.9)|0},${(cg*0.82)|0},${(cb*0.72)|0},1)`);
       disc.addColorStop(1.00, `rgba(${cr},${cg},${cb},0)`);
       ctx.fillStyle = disc;
       ctx.beginPath();
-      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.arc(sx, sy, r, 0, 6.283);
       ctx.fill();
     }
 
+    // ---------------- Master draw ----------------
     function draw(depth) {
-      if (!base) return;
-
-      // Reset transform each frame — base and grade are in physical pixels
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-      // 1. Base scene (1:1, static)
-      ctx.drawImage(base, 0, 0);
-
-      // Switch to CSS-pixel space for the grade overlays and sun
+      if (!W || !H || !starCanvas) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const grade = gradeAt(depth);
+      const f = frameAt(depth);
 
-      // 2. Multiply — deepens the darks and tints the scene
-      ctx.globalCompositeOperation = "multiply";
-      ctx.fillStyle = `rgba(${grade.mul[0]|0},${grade.mul[1]|0},${grade.mul[2]|0},${grade.mulA})`;
-      ctx.fillRect(0, 0, W, H);
-
-      // 3. Screen — lifts the highlights toward the era's color
-      if (grade.scrA > 0.001) {
-        ctx.globalCompositeOperation = "screen";
-        ctx.fillStyle = `rgba(${grade.scr[0]|0},${grade.scr[1]|0},${grade.scr[2]|0},${grade.scrA})`;
-        ctx.fillRect(0, 0, W, H);
-      }
-
-      ctx.globalCompositeOperation = "source-over";
-
-      // 4. Sun on top
-      drawSun(depth, grade);
+      drawSky(f);
+      drawMilky(f);
+      drawStars(f);
+      drawHaze(f);
+      drawRidges(f);
+      drawCities(f);
+      drawSun(f, depth);
     }
 
     function skyColorAt(depth) {
-      const g = gradeAt(depth);
+      const f = frameAt(depth);
       return [
-        Math.min(255, 6 + g.scr[0] * g.scrA + g.mul[0] * g.mulA * 0.15),
-        Math.min(255, 8 + g.scr[1] * g.scrA + g.mul[1] * g.mulA * 0.15),
-        Math.min(255, 16 + g.scr[2] * g.scrA + g.mul[2] * g.mulA * 0.15)
+        (f.skyMid[0] * 0.6 + f.skyBot[0] * 0.4) | 0,
+        (f.skyMid[1] * 0.6 + f.skyBot[1] * 0.4) | 0,
+        (f.skyMid[2] * 0.6 + f.skyBot[2] * 0.4) | 0
       ];
     }
 
@@ -846,7 +864,6 @@
       started = true;
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
-
       ctx = new AC();
       if (ctx.state === "suspended") ctx.resume().catch(() => {});
 
@@ -859,7 +876,6 @@
 
       wetGain = ctx.createGain(); wetGain.gain.value = 0.55;
       dryGain = ctx.createGain(); dryGain.gain.value = 0.62;
-
       convolver.connect(wetGain).connect(master);
       dryGain.connect(master);
 
@@ -979,18 +995,13 @@
   //  State
   // ============================================================
   const state = {
-    p: 0,
-    years: 0,
-    depth: 0,
+    p: 0, years: 0, depth: 0,
     lastSky: null,
-    lastNum: "Now",
-    lastUnit: "",
+    lastNum: "Now", lastUnit: "",
     lastMilestone: -1,
     activeLine: lineA,
-    started: false,
-    playing: false,
-    lastTick: 0,
-    lastRenderedDepth: -1
+    started: false, playing: false, lastTick: 0,
+    lastRendered: -1
   };
 
   // ============================================================
@@ -1014,9 +1025,8 @@
         window.scrollTo({ top: yearsToScroll(m.y) * maxScroll(), behavior: "smooth" });
       });
       railEl.appendChild(btn);
-      railTicks.push({ el: btn, y: m.y, index: i });
+      railTicks.push({ el: btn, index: i });
     });
-
     const head = document.createElement("div");
     head.className = "rail-head";
     railEl.appendChild(head);
@@ -1028,9 +1038,8 @@
     function setFromEvent(e) {
       const r = railEl.getBoundingClientRect();
       const y = Math.min(r.bottom, Math.max(r.top, e.clientY));
-      const p = (y - r.top) / (r.height || 1);
       begin();
-      window.scrollTo({ top: p * maxScroll(), behavior: "auto" });
+      window.scrollTo({ top: ((y - r.top) / (r.height || 1)) * maxScroll(), behavior: "auto" });
     }
     railEl.addEventListener("pointerdown", (e) => {
       if (e.target.closest(".rail-tick")) return;
@@ -1075,7 +1084,6 @@
     else   { sourceEl.classList.remove("visible"); }
 
     liveEl.textContent = MILESTONES[index].line;
-
     if (Sound.isStarted()) Sound.bell(depthOf(MILESTONES[index].y));
   }
 
@@ -1108,11 +1116,13 @@
     }
     setMilestone(mi);
 
-    const sky = Sky.skyColorAt(state.depth);
-    const r = Math.round(sky[0]), g = Math.round(sky[1]), b = Math.round(sky[2]);
-    if (!state.lastSky || state.lastSky[0] !== r || state.lastSky[1] !== g || state.lastSky[2] !== b) {
-      state.lastSky = [r, g, b];
-      document.body.style.backgroundColor = `rgb(${r},${g},${b})`;
+    const sky = Scenery.skyColorAt(state.depth);
+    if (!state.lastSky ||
+        state.lastSky[0] !== sky[0] ||
+        state.lastSky[1] !== sky[1] ||
+        state.lastSky[2] !== sky[2]) {
+      state.lastSky = sky;
+      document.body.style.backgroundColor = `rgb(${sky[0]},${sky[1]},${sky[2]})`;
     }
 
     railEl._head.style.top = (state.p * 100) + "%";
@@ -1135,8 +1145,7 @@
   // ============================================================
   //  Hash
   // ============================================================
-  let hashTimer = 0;
-  let suppressHash = false;
+  let hashTimer = 0, suppressHash = false;
   function scheduleHashWrite() {
     if (suppressHash) return;
     clearTimeout(hashTimer);
@@ -1155,7 +1164,7 @@
   }
 
   // ============================================================
-  //  Autoplay
+  //  Autoplay + buttons
   // ============================================================
   const PLAY_RATE = 0.012;
   function setPlaying(on) {
@@ -1220,11 +1229,9 @@
   window.addEventListener("keydown", (e) => {
     const tag = (e.target && e.target.tagName) || "";
     if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
-
     const max = maxScroll();
     const small = window.innerHeight * 0.6;
     const big = window.innerHeight * 2.4;
-
     switch (e.key) {
       case "ArrowDown": window.scrollBy(0, small); e.preventDefault(); break;
       case "ArrowUp":   window.scrollBy(0, -small); e.preventDefault(); break;
@@ -1242,7 +1249,7 @@
   });
 
   // ============================================================
-  //  Loop — only redraw when depth actually changes
+  //  Loop
   // ============================================================
   function loop(t) {
     if (state.playing) {
@@ -1256,36 +1263,31 @@
       state.lastTick = t;
     }
 
-    // Only repaint when depth changed — the scene itself never moves
-    if (Math.abs(state.depth - state.lastRenderedDepth) > 0.00008) {
-      Sky.draw(state.depth);
-      state.lastRenderedDepth = state.depth;
+    if (Math.abs(state.depth - state.lastRendered) > 0.0001) {
+      Scenery.draw(state.depth);
+      state.lastRendered = state.depth;
     }
-
     requestAnimationFrame(loop);
   }
 
   // ============================================================
-  //  Resize
+  //  Resize + init
   // ============================================================
   let resizeRaf = 0;
   function onResize() {
     cancelAnimationFrame(resizeRaf);
     resizeRaf = requestAnimationFrame(() => {
-      Sky.resize();
-      state.lastRenderedDepth = -1;
-      Sky.draw(state.depth);
+      Scenery.resize();
+      state.lastRendered = -1;
+      Scenery.draw(state.depth);
       onScroll();
     });
   }
 
-  // ============================================================
-  //  Init
-  // ============================================================
   function init() {
-    Sky.resize();
-    Sky.draw(0);
-    state.lastRenderedDepth = 0;
+    Scenery.resize();
+    Scenery.draw(0);
+    state.lastRendered = 0;
 
     const fromHash = readHash();
     if (fromHash) {
@@ -1295,7 +1297,6 @@
     } else {
       onScroll();
     }
-
     requestAnimationFrame(loop);
   }
 
