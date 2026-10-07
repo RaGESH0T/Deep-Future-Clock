@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#05070d">
+<title>The Deep Future Clock</title>
+<style>
+  :root {
+    --fg: #ece9e2;
+    --dim: rgba(236, 233, 226, 0.55);
+    --faint: rgba(236, 233, 226, 0.22);
+    --bg: #05070d;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    overscroll-behavior: none;
+    scrollbar-width: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html::-webkit-scrollbar { display: none; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    transition: background-color 900ms cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ---- layers ---- */
+  #stars {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    display: block;
+  }
+  .vignette {
+    position: fixed; inset: 0; z-index: 2;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 120% 90% at 50% 50%, transparent 30%, rgba(0,0,0,.35) 75%, rgba(0,0,0,.72) 100%);
+  }
+  .grain {
+    position: fixed; inset: 0; z-index: 3;
+    pointer-events: none;
+    opacity: .045;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---- readout ---- */
+  .stage {
+    position: fixed; inset: 0; z-index: 4;
+    display: grid; place-items: center;
+    padding: 8vmin 6vmin 14vmin;
+    pointer-events: none;
+    text-align: center;
+  }
+  .readout { width: 100%; max-width: 22ch; }
+
+  .number {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .1em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    line-height: .92;
+    text-shadow: 0 0 60px rgba(0,0,0,.6);
+    transition: opacity 500ms ease;
+  }
+  #num {
+    font-size: clamp(2.6rem, 12.5vw, 9.5rem);
+    font-weight: 200;
+    letter-spacing: -0.045em;
+    display: block;
+    white-space: nowrap;
+  }
+  #unit {
+    font-size: clamp(.7rem, 1.6vw, 1rem);
+    font-weight: 400;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--dim);
+    min-height: 1.2em;
+    display: block;
+    margin-top: .5em;
+  }
+
+  .rule {
+    width: clamp(40px, 8vw, 90px);
+    height: 1px;
+    background: currentColor;
+    opacity: .18;
+    margin: clamp(1.6rem, 4vh, 2.6rem) auto clamp(1.4rem, 3.4vh, 2.2rem);
+  }
+
+  .milestones {
+    display: grid;
+    place-items: center;
+    min-height: 4.6em;
+    width: 100%;
+  }
+  .line {
+    grid-area: 1 / 1;
+    margin: 0;
+    max-width: 24ch;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(1.05rem, 2.5vw, 1.7rem);
+    line-height: 1.38;
+    letter-spacing: 0.002em;
+    color: rgba(236, 233, 226, .9);
+    opacity: 0;
+    transform: translateY(5px);
+    transition: opacity 900ms cubic-bezier(.2,.6,.2,1), transform 900ms cubic-bezier(.2,.6,.2,1);
+    text-wrap: balance;
+  }
+  .line.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .line.leaving {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  .hint {
+    position: fixed;
+    left: 50%;
+    bottom: max(6vh, env(safe-area-inset-bottom, 0px) + 4vh);
+    transform: translateX(-50%);
+    z-index: 4;
+    font-size: .68rem;
+    letter-spacing: .42em;
+    text-transform: uppercase;
+    color: var(--dim);
+    opacity: 1;
+    transition: opacity 800ms ease;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1em;
+  }
+  .hint.hidden { opacity: 0; }
+  .hint .chev {
+    width: 1px; height: 26px;
+    background: linear-gradient(to bottom, transparent, var(--dim));
+    animation: chev 2.8s ease-in-out infinite;
+  }
+  @keyframes chev {
+    0%, 100% { opacity: .3; transform: translateY(-3px); }
+    50%      { opacity: .9; transform: translateY(3px); }
+  }
+
+  /* ---- rail ---- */
+  .rail {
+    position: fixed;
+    right: clamp(14px, 2.4vw, 30px);
+    top: 18vh;
+    height: 64vh;
+    width: 2px;
+    z-index: 5;
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,.09) 8%, rgba(255,255,255,.09) 92%, transparent);
+    pointer-events: none;
+  }
+  .rail-tick {
+    position: absolute;
+    right: -7px;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    pointer-events: auto;
+    transform: translateY(-50%);
+    display: grid;
+    place-items: center;
+  }
+  .rail-tick::after {
+    content: "";
+    width: 7px; height: 1px;
+    background: rgba(255,255,255,.32);
+    transition: width 220ms ease, background 220ms ease;
+  }
+  .rail-tick:hover::after,
+  .rail-tick:focus-visible::after {
+    width: 13px;
+    background: rgba(255,255,255,.75);
+  }
+  .rail-tick:focus-visible { outline: none; }
+  .rail-tick[data-active="true"]::after {
+    width: 13px;
+    background: rgba(255,255,255,.9);
+  }
+  .rail-playhead {
+    position: absolute;
+    right: -4px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--fg);
+    box-shadow: 0 0 12px rgba(236,233,226,.5);
+    transform: translateY(-50%);
+    transition: opacity 300ms ease;
+    pointer-events: none;
+  }
+  @media (max-width: 720px) {
+    .rail { display: none; }
+  }
+
+  /* ---- controls ---- */
+  .controls {
+    position: fixed;
+    left: clamp(14px, 2.4vw, 28px);
+    bottom: max(16px, env(safe-area-inset-bottom, 0px) + 12px);
+    z-index: 6;
+    display: flex;
+    gap: 8px;
+  }
+  .controls button {
+    appearance: none;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.09);
+    color: var(--dim);
+    font: inherit;
+    font-size: .68rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    padding: .55em 1em;
+    border-radius: 999px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: color 200ms ease, border-color 200ms ease, background 200ms ease, opacity 400ms ease;
+  }
+  .controls button:hover {
+    color: var(--fg);
+    border-color: rgba(255,255,255,.24);
+    background: rgba(255,255,255,.07);
+  }
+  .controls button:focus-visible {
+    outline: 1px solid rgba(255,255,255,.5);
+    outline-offset: 2px;
+  }
+  .controls button[aria-pressed="true"] {
+    color: rgba(255,255,255,.35);
+    border-color: rgba(255,255,255,.06);
+  }
+
+  /* ---- endnote ---- */
+  .endnote {
+    position: fixed;
+    left: 50%;
+    bottom: max(9vh, env(safe-area-inset-bottom, 0px) + 7vh);
+    transform: translate(-50%, 10px);
+    z-index: 4;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-style: italic;
+    font-size: clamp(.95rem, 2vw, 1.25rem);
+    color: rgba(236,233,226,.7);
+    opacity: 0;
+    transition: opacity 1400ms ease, transform 1400ms ease;
+    pointer-events: none;
+    text-align: center;
+    width: min(90vw, 40ch);
+  }
+  .endnote.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  /* ---- spacer ---- */
+  .spacer { height: 1200vh; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #stars { opacity: .5; }
+    .hint .chev { animation: none; }
+    .line { transition-duration: 200ms; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stars" aria-hidden="true"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<main class="stage">
+  <div class="readout">
+    <div class="number" id="number">
+      <span id="num">Now</span>
+      <span id="unit"></span>
+    </div>
+    <div class="rule" aria-hidden="true"></div>
+    <div class="milestones">
+      <p class="line active" id="lineA" aria-live="polite">You are here.</p>
+      <p class="line" id="lineB"></p>
+    </div>
+  </div>
+</main>
+
+<nav class="rail" id="rail" aria-label="Timeline"></nav>
+
+<div class="controls">
+  <button id="nowBtn" type="button" aria-label="Return to now">Now</button>
+  <button id="muteBtn" type="button" aria-label="Mute sound" aria-pressed="false">Sound</button>
+</div>
+
+<div class="hint" id="hint" aria-hidden="true">
+  <span>Scroll</span>
+  <span class="chev"></span>
+</div>
+
+<div class="endnote" id="endnote">None of this matters. That&rsquo;s okay.</div>
+
+<div class="spacer"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ============================================================
+  //  Data
+  // ============================================================
+  const MAX_YEARS = 250_000_000;
+  const MAX_LOG   = Math.log10(MAX_YEARS);   // ≈ 8.39794
+  const HOLD      = 0.02;                    // fraction of scroll that holds "Now"
+
+  const MILESTONES = [
+    { y: 0,           line: "You are here." },
+    { y: 50,          line: "The last person who remembers you will likely be gone." },
+    { y: 200,         line: "Everyone alive today will be gone." },
+    { y: 1_000,       line: "The English language will be unintelligible to modern ears." },
+    { y: 10_000,      line: "The Sahara will be green again." },
+    { y: 50_000,      line: "Niagara Falls will have eroded away." },
+    { y: 100_000,     line: "The night sky will be unrecognizable." },
+    { y: 1_000_000,   line: "Most of what we built will have vanished." },
+    { y: 50_000_000,  line: "The Mediterranean will close." },
+    { y: 250_000_000, line: "The continents will merge into Pangaea Ultima." }
+  ];
+
+  // Background keyframes — interpolated in log-time.
+  const EPOCH_COLORS = [
+    { y: 0,           c: [  5,   7,  13] },  // near-black blue
+    { y: 50,          c: [  8,  11,  27] },  // deep indigo
+    { y: 200,         c: [ 12,   9,  30] },
+    { y: 1_000,       c: [ 17,  10,  36] },  // violet
+    { y: 10_000,      c: [ 34,  24,  13] },  // warm ochre
+    { y: 50_000,      c: [ 11,  30,  30] },  // cold teal
+    { y: 100_000,     c: [  7,  15,  42] },  // deep blue
+    { y: 1_000_000,   c: [ 21,  10,  38] },  // plum
+    { y: 50_000_000,  c: [ 36,  10,  25] },  // wine
+    { y: 250_000_000, c: [ 46,   8,  32] }   // magenta ember
+  ];
+
+  const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ============================================================
+  //  Time ⇄ scroll mapping  (logarithmic)
+  // ============================================================
+  function scrollToYears(p) {
+    if (p <= HOLD) return 0;
+    const q = (p - HOLD) / (1 - HOLD);
+    return Math.pow(10, q * MAX_LOG);
+  }
+  function yearsToScroll(y) {
+    if (y <= 1) return 0;
+    const q = Math.log10(y) / MAX_LOG;
+    return HOLD + q * (1 - HOLD);
+  }
+  function depthOf(y) {
+    if (y <= 1) return 0;
+    return Math.log10(y) / MAX_LOG;
+  }
+  function maxScroll() {
+    return Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+  }
+
+  // ============================================================
+  //  Formatting
+  // ============================================================
+  function fmt(y) {
+    if (y < 1) return { n: "Now", u: "" };
+    if (y < 1_000) return { n: String(Math.round(y)), u: "years" };
+    if (y < 1_000_000) {
+      return { n: Math.round(y).toLocaleString("en-US"), u: "years" };
+    }
+    if (y < 1_000_000_000) {
+      const m = y / 1_000_000;
+      const s = m < 10 ? String(Math.round(m * 10) / 10) : String(Math.round(m));
+      return { n: s, u: "million years" };
+    }
+    const b = y / 1_000_000_000;
+    const s = b < 10 ? String(Math.round(b * 10) / 10) : String(Math.round(b));
+    return { n: s, u: "billion years" };
+  }
+
+  // ============================================================
+  //  Color
+  // ============================================================
+  const L = y => Math.log10(Math.max(0.5, y));
+
+  function colorAt(years) {
+    const E = EPOCH_COLORS;
+    if (years <= E[0].y) return E[0].c;
+    const last = E[E.length - 1];
+    if (years >= last.y) return last.c;
+    for (let i = 0; i < E.length - 1; i++) {
+      const a = E[i], b = E[i + 1];
+      if (years >= a.y && years <= b.y) {
+        const la = L(a.y), lb = L(b.y), ly = L(years);
+        const t = lb > la ? (ly - la) / (lb - la) : 0;
+        return [
+          a.c[0] + (b.c[0] - a.c[0]) * t,
+          a.c[1] + (b.c[1] - a.c[1]) * t,
+          a.c[2] + (b.c[2] - a.c[2]) * t
+        ];
+      }
+    }
+    return E[0].c;
+  }
+
+  // ============================================================
+  //  Audio — generative drone + reverb + bells
+  // ============================================================
+  const Audio = (() => {
+    let ctx = null, started = false, muted = false;
+    let master, bus, filter, oscs = [], convolver, wetGain, dryGain;
+
+    function makeImpulse(context, duration, decay) {
+      const rate = context.sampleRate;
+      const len = Math.floor(rate * duration);
+      const buf = context.createBuffer(2, len, rate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = buf.getChannelData(ch);
+        for (let i = 0; i < len; i++) {
+          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+        }
+      }
+      return buf;
+    }
+
+    function start() {
+      if (started) return;
+      started = true;
+
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+
+      ctx = new AC();
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+
+      master = ctx.createGain();
+      master.gain.value = 0;
+      master.connect(ctx.destination);
+
+      convolver = ctx.createConvolver();
+      convolver.buffer = makeImpulse(ctx, 4.5, 2.6);
+
+      wetGain = ctx.createGain(); wetGain.gain.value = 0.55;
+      dryGain = ctx.createGain(); dryGain.gain.value = 0.65;
+
+      convolver.connect(wetGain).connect(master);
+      dryGain.connect(master);
+
+      bus = ctx.createGain();
+      bus.connect(dryGain);
+      bus.connect(convolver);
+
+      filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 420;
+      filter.Q.value = 0.9;
+      filter.connect(bus);
+
+      // Harmonic stack — root, fifth, octave, twelfth
+      const specs = [
+        { f: 55,    g: 0.50, type: "sine" },
+        { f: 82.5,  g: 0.28, type: "sine" },
+        { f: 110,   g: 0.20, type: "triangle" },
+        { f: 165,   g: 0.09, type: "sine" }
+      ];
+
+      oscs = specs.map(s => {
+        const osc = ctx.createOscillator();
+        osc.type = s.type;
+        osc.frequency.value = s.f;
+        const g = ctx.createGain();
+        g.gain.value = s.g;
+        osc.connect(g).connect(filter);
+        osc.start();
+        return { osc, base: s.f, gain: g, baseGain: s.g };
+      });
+
+      // Slow detune LFO for organic motion
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.061;
+      const lfoAmt = ctx.createGain();
+      lfoAmt.gain.value = 2.2;
+      lfo.connect(lfoAmt);
+      oscs.forEach(o => lfoAmt.connect(o.osc.detune));
+      lfo.start();
+
+      // Second, slower amplitude LFO on the master for breathing
+      const breath = ctx.createOscillator();
+      breath.frequency.value = 0.033;
+      const breathAmt = ctx.createGain();
+      breathAmt.gain.value = 0.05;
+      breath.connect(breathAmt).connect(master.gain);
+      breath.start();
+
+      master.gain.setValueAtTime(0, ctx.currentTime);
+      master.gain.linearRampToValueAtTime(muted ? 0 : 0.32, ctx.currentTime + 6);
+    }
+
+    function update(depth) {
+      if (!ctx) return;
+      const t = ctx.currentTime;
+      const pitchMul = 1 - depth * 0.52;
+      oscs.forEach(({ osc, base }) => {
+        osc.frequency.setTargetAtTime(base * pitchMul, t, 0.6);
+      });
+      filter.frequency.setTargetAtTime(340 + depth * 1500, t, 0.6);
+      wetGain.gain.setTargetAtTime(0.55 + depth * 0.2, t, 0.6);
+    }
+
+    function bell(depth) {
+      if (!ctx || muted) return;
+      const t = ctx.currentTime;
+      const root = 880 - depth * 420;
+
+      [1, 2.01, 3.02].forEach((mult, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = root * mult;
+        const g = ctx.createGain();
+        const peak = [0.085, 0.03, 0.012][i];
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(peak, t + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 4.2 - i * 1.1);
+        osc.connect(g).connect(bus);
+        osc.start(t);
+        osc.stop(t + 4.4);
+      });
+    }
+
+    function setMuted(m) {
+      muted = m;
+      if (!ctx) return;
+      master.gain.setTargetAtTime(m ? 0 : 0.32, ctx.currentTime, 0.25);
+    }
+
+    function isStarted() { return started; }
+    function isMuted() { return muted; }
+
+    return { start, update, bell, setMuted, isStarted, isMuted };
+  })();
+
+  // ============================================================
+  //  Starfield
+  // ============================================================
+  const Starfield = (() => {
+    const canvas = document.getElementById("stars");
+    const ctx = canvas.getContext("2d", { alpha: true });
+    let W = 0, H = 0, dpr = 1, stars = [];
+
+    function resize() {
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = canvas.clientWidth;
+      H = canvas.clientHeight;
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      generate();
+    }
+
+    function generate() {
+      const area = W * H;
+      const count = Math.max(120, Math.min(560, Math.round(area / 3200)));
+      stars = new Array(count);
+      for (let i = 0; i < count; i++) {
+        stars[i] = {
+          // -0.3 … 1.3 gives margin so rotation never reveals empty corners
+          x: -0.3 + Math.random() * 1.6,
+          y: -0.3 + Math.random() * 1.6,
+          r: Math.pow(Math.random(), 2.2) * 1.15 + 0.28,
+          base: Math.random() * 0.55 + 0.28,
+          phase: Math.random() * Math.PI * 2,
+          speed: Math.random() * 0.55 + 0.25,
+          warm: Math.random()          // 0 = cool, 1 = warm
+        };
+      }
+    }
+
+    function draw(time, depth, bg) {
+      if (!W || !H) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+
+      // Sky rotates once you cross ~10,000 years — proper motion
+      const rot = Math.max(0, depth * MAX_LOG - 3) * 0.045;
+      const cos = Math.cos(rot), sin = Math.sin(rot);
+      const cx = W * 0.5, cy = H * 0.5;
+
+      // Slow vertical drift
+      const drift = REDUCED ? 0 : (time * 0.000006) % 1;
+
+      // Star tint emerges from the background
+      const rr = Math.min(255, bg[0] + 218);
+      const gg = Math.min(255, bg[1] + 216);
+      const bb = Math.min(255, bg[2] + 224);
+
+      const brightness = 0.55 + depth * 0.45;
+
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+
+        const tw = REDUCED
+          ? 0.85
+          : 0.55 + 0.45 * Math.sin(time * 0.001 * s.speed + s.phase);
+
+        const alpha = Math.min(1, s.base * tw * brightness);
+
+        let x = (s.x - 0.5) * W;
+        let y = ((s.y - 0.5 + drift) % 1.6 - 0.8) * H;
+
+        const rx = x * cos - y * sin + cx;
+        const ry = x * sin + y * cos + cy;
+
+        if (rx < -20 || rx > W + 20 || ry < -20 || ry > H + 20) continue;
+
+        // Subtle warm/cool variance
+        const cr = Math.round(rr + (255 - rr) * s.warm * 0.25);
+        const cg = Math.round(gg + (240 - gg) * (1 - s.warm) * 0.12);
+        const cb = Math.round(bb);
+
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = `rgb(${cr},${cg},${cb})`;
+        ctx.beginPath();
+        ctx.arc(rx, ry, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    return { resize, draw };
+  })();
+
+  // ============================================================
+  //  DOM refs
+  // ============================================================
+  const numEl      = document.getElementById("num");
+  const unitEl     = document.getElementById("unit");
+  const lineA      = document.getElementById("lineA");
+  const lineB      = document.getElementById("lineB");
+  const hintEl     = document.getElementById("hint");
+  const endnoteEl  = document.getElementById("endnote");
+  const railEl     = document.getElementById("rail");
+  const nowBtn     = document.getElementById("nowBtn");
+  const muteBtn    = document.getElementById("muteBtn");
+
+  // ============================================================
+  //  State
+  // ============================================================
+  const state = {
+    p: 0,
+    years: 0,
+    depth: 0,
+    bg: [5, 7, 13],
+    lastBg: null,
+    lastNumText: "Now",
+    lastUnitText: "",
+    lastMilestoneIndex: -1,
+    lastCrossedYears: 0,
+    activeLine: lineA,
+    lineToken: 0,
+    started: false
+  };
+
+  // ============================================================
+  //  Rail construction
+  // ============================================================
+  const railTicks = [];
+  (() => {
+    MILESTONES.forEach((m, i) => {
+      if (m.y === 0) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "rail-tick";
+      btn.style.top = (yearsToScroll(m.y) * 100) + "%";
+      const f = fmt(m.y);
+      btn.setAttribute("aria-label", `Jump to ${f.n}${f.u ? " " + f.u : ""}`);
+      btn.title = `${f.n}${f.u ? " " + f.u : ""} — ${m.line}`;
+      btn.addEventListener("click", () => {
+        startEverything();
+        const target = yearsToScroll(m.y) * maxScroll();
+        window.scrollTo({ top: target, behavior: "smooth" });
+      });
+      railEl.appendChild(btn);
+      railTicks.push({ el: btn, y: m.y, index: i });
+    });
+
+    const head = document.createElement("div");
+    head.className = "rail-playhead";
+    railEl.appendChild(head);
+    railEl._head = head;
+  })();
+
+  // ============================================================
+  //  Milestone text crossfade
+  // ============================================================
+  function setMilestoneText(index) {
+    if (index === state.lastMilestoneIndex) return;
+    state.lastMilestoneIndex = index;
+
+    const next = state.activeLine === lineA ? lineB : lineA;
+    const prev = state.activeLine;
+
+    next.textContent = MILESTONES[index].line;
+
+    // Force reflow so the transition always runs
+    void next.offsetWidth;
+
+    next.classList.add("active");
+    next.classList.remove("leaving");
+    prev.classList.remove("active");
+    prev.classList.add("leaving");
+
+    state.activeLine = next;
+  }
+
+  // ============================================================
+  //  Audio bootstrap
+  // ============================================================
+  function startEverything() {
+    if (state.started) return;
+    state.started = true;
+    Audio.start();
+  }
+
+  ["pointerdown", "keydown", "touchstart", "wheel"].forEach(ev => {
+    window.addEventListener(ev, startEverything, { once: true, passive: true });
+  });
+
+  // ============================================================
+  //  Main render
+  // ============================================================
+  function render() {
+    const p = state.p;
+    const years = state.years;
+
+    state.depth = depthOf(years);
+
+    // ---- number ----
+    const f = fmt(years);
+    if (f.n !== state.lastNumText) {
+      numEl.textContent = f.n;
+      state.lastNumText = f.n;
+    }
+    if (f.u !== state.lastUnitText) {
+      unitEl.textContent = f.u;
+      state.lastUnitText = f.u;
+    }
+
+    // ---- milestone ----
+    let mi = 0;
+    for (let i = 0; i < MILESTONES.length; i++) {
+      if (MILESTONES[i].y <= years) mi = i;
+      else break;
+    }
+    setMilestoneText(mi);
+
+    // ---- bells on crossing ----
+    if (Audio.isStarted()) {
+      const prevY = state.lastCrossedYears;
+      for (let i = 1; i < MILESTONES.length; i++) {
+        const m = MILESTONES[i];
+        if (prevY < m.y && years >= m.y) Audio.bell(depthOf(m.y));
+      }
+    }
+    state.lastCrossedYears = years;
+
+    // ---- background ----
+    const bg = colorAt(years);
+    const r = Math.round(bg[0]), g = Math.round(bg[1]), b = Math.round(bg[2]);
+    if (!state.lastBg || state.lastBg[0] !== r || state.lastBg[1] !== g || state.lastBg[2] !== b) {
+      state.lastBg = [r, g, b];
+      state.bg = [r, g, b];
+      document.body.style.backgroundColor = `rgb(${r},${g},${b})`;
+    }
+
+    // ---- rail ----
+    railEl._head.style.top = (p * 100) + "%";
+    const activeIdx = mi;
+    railTicks.forEach(t => {
+      t.el.dataset.active = String(t.index === activeIdx);
+    });
+
+    // ---- hint / endnote ----
+    hintEl.classList.toggle("hidden", p > 0.004);
+    endnoteEl.classList.toggle("visible", p > 0.985);
+
+    // ---- audio ----
+    Audio.update(state.depth);
+  }
+
+  // ============================================================
+  //  Scroll
+  // ============================================================
+  function onScroll() {
+    const max = maxScroll();
+    const p = Math.min(1, Math.max(0, window.scrollY / max));
+    state.p = p;
+    state.years = scrollToYears(p);
+    render();
+  }
+
+  // ============================================================
+  //  rAF loop (starfield only)
+  // ============================================================
+  function loop(t) {
+    Starfield.draw(t, state.depth, state.bg);
+    requestAnimationFrame(loop);
+  }
+
+  // ============================================================
+  //  Controls
+  // ============================================================
+  nowBtn.addEventListener("click", () => {
+    startEverything();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  muteBtn.addEventListener("click", () => {
+    startEverything();
+    const next = !Audio.isMuted();
+    Audio.setMuted(next);
+    muteBtn.setAttribute("aria-pressed", String(next));
+    muteBtn.textContent = next ? "Muted" : "Sound";
+    muteBtn.setAttribute("aria-label", next ? "Unmute sound" : "Mute sound");
+  });
+
+  // ============================================================
+  //  Resize
+  // ============================================================
+  let resizeRaf = 0;
+  function onResize() {
+    cancelAnimationFrame(resizeRaf);
+    resizeRaf = requestAnimationFrame(() => {
+      Starfield.resize();
+      onScroll();
+    });
+  }
+
+  // ============================================================
+  //  Init
+  // ============================================================
+  function init() {
+    Starfield.resize();
+    onScroll();
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onResize, { passive: true });
+  window.addEventListener("orientationchange", onResize, { passive: true });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
